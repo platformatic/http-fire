@@ -64,7 +64,7 @@ describe('TrafficRunner', () => {
     runner.setRate(50)
     await wait(1500)
 
-    assert.ok(reportedTraffic !== null, 'expected onTraffic callback to be called')
+    assert.ok(reportedTraffic !== null, 'expected onTick callback to be called')
     assert.ok(reportedTraffic > 0, `expected traffic > 0, got ${reportedTraffic}`)
   })
 

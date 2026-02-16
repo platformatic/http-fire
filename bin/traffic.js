@@ -4,8 +4,7 @@
 
 const { parseArgs } = require('node:util')
 const { readFileSync } = require('node:fs')
-const { TrafficGenerator } = require('../lib/traffic-generator')
-const { TrafficRunner } = require('../lib/traffic-runner')
+const httpFire = require('../index')
 
 const DEFAULTS = {
   min: 100,
@@ -33,7 +32,7 @@ const { values } = parseArgs({
 })
 
 if (!values.url) {
-  console.error('Usage: http-fire --url <url> [options]')
+  console.error('Usage: fire --url <url> [options]')
   console.error('')
   console.error('Options:')
   console.error('  --url, -u       Target URL to send traffic to (required)')
@@ -50,16 +49,6 @@ if (!values.url) {
   process.exit(1)
 }
 
-const trafficConfig = {
-  min: values.min ? parseInt(values.min, 10) : DEFAULTS.min,
-  max: values.max ? parseInt(values.max, 10) : DEFAULTS.max,
-  noise: values.noise ? parseFloat(values.noise) : DEFAULTS.noise,
-  steady: values.steady ? parseInt(values.steady, 10) : DEFAULTS.steady,
-  spike: values.spike ? parseInt(values.spike, 10) : DEFAULTS.spike
-}
-
-const method = values.method || DEFAULTS.method
-
 let headers
 if (values.header) {
   headers = values.header.reduce((obj, header) => {
@@ -75,15 +64,6 @@ if (values.header) {
   }, {})
 }
 
-console.log('Starting traffic generator:')
-console.log('  URL: ' + values.url)
-console.log('  Method: ' + method.toUpperCase())
-console.log('  Min: ' + trafficConfig.min + ' req/s')
-console.log('  Max: ' + trafficConfig.max + ' req/s')
-console.log('  Noise: ' + trafficConfig.noise)
-console.log('  Steady: ' + trafficConfig.steady + 's')
-console.log('  Spike: ' + trafficConfig.spike + 's')
-
 let body
 if (values.input) {
   body = readFileSync(values.input, 'utf8')
@@ -91,6 +71,37 @@ if (values.input) {
   body = values.body
 }
 
+const opts = {
+  url: values.url,
+  min: values.min ? parseInt(values.min, 10) : undefined,
+  max: values.max ? parseInt(values.max, 10) : undefined,
+  noise: values.noise ? parseFloat(values.noise) : undefined,
+  steady: values.steady ? parseInt(values.steady, 10) : undefined,
+  spike: values.spike ? parseInt(values.spike, 10) : undefined,
+  method: values.method,
+  headers,
+  body,
+  rejectUnauthorized: values.insecure ? false : undefined,
+  onTick: (actualTraffic) => {
+    process.stdout.write('\rTarget: ' + instance.targetRate + ' req/s | Actual: ' + actualTraffic + ' req/s    ')
+  },
+  onError: (err) => {
+    if (err.statusCode) {
+      console.error('\nHTTP error ' + err.statusCode + ': ' + err.message)
+    } else {
+      console.error('\nRequest error: ' + err.message)
+    }
+  }
+}
+
+console.log('Starting traffic generator:')
+console.log('  URL: ' + values.url)
+console.log('  Method: ' + (values.method || DEFAULTS.method).toUpperCase())
+console.log('  Min: ' + (opts.min || DEFAULTS.min) + ' req/s')
+console.log('  Max: ' + (opts.max || DEFAULTS.max) + ' req/s')
+console.log('  Noise: ' + (opts.noise ?? DEFAULTS.noise))
+console.log('  Steady: ' + (opts.steady || DEFAULTS.steady) + 's')
+console.log('  Spike: ' + (opts.spike || DEFAULTS.spike) + 's')
 
 if (headers) {
   for (const [key, value] of Object.entries(headers)) {
@@ -107,35 +118,10 @@ if (values.insecure) {
 }
 console.log('')
 
-const trafficGenerator = new TrafficGenerator(trafficConfig)
-const trafficRunner = new TrafficRunner(
-  values.url,
-  (actualTraffic) => {
-    process.stdout.write('\rTarget: ' + targetRate + ' req/s | Actual: ' + actualTraffic + ' req/s    ')
-  },
-  {
-    method,
-    headers,
-    body,
-    rejectUnauthorized: values.insecure ? false : undefined,
-    onError: (err) => {
-      if (err.statusCode) {
-        console.error('\nHTTP error ' + err.statusCode + ': ' + err.message)
-      } else {
-        console.error('\nRequest error: ' + err.message)
-      }
-    }
-  }
-)
-
-let targetRate = 0
-setInterval(() => {
-  targetRate = trafficGenerator.next()
-  trafficRunner.setRate(targetRate)
-}, 1000)
+const instance = httpFire(opts)
 
 process.on('SIGINT', () => {
   console.log('\nStopping traffic generator...')
-  trafficRunner.stop()
+  instance.stop()
   process.exit(0)
 })

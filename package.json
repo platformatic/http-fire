@@ -4,7 +4,7 @@
   "description": "HTTP traffic generator with realistic traffic patterns",
   "main": "index.js",
   "bin": {
-    "http-fire": "bin/traffic.js"
+    "fire": "bin/traffic.js"
   },
   "scripts": {
     "test": "node --test"
