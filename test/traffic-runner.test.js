@@ -204,4 +204,94 @@ describe('TrafficRunner', () => {
 
     assert.equal(receivedMethod, 'PUT')
   })
+
+  it('should send custom headers', async () => {
+    let receivedHeaders = null
+    const { server, url } = await startServer((req, res) => {
+      receivedHeaders = req.headers
+      res.writeHead(200)
+      res.end('ok')
+    })
+    const runner = new TrafficRunner(url, () => {}, {
+      headers: {
+        'X-Custom-Header': 'test-value',
+        Authorization: 'Bearer token123'
+      }
+    })
+    after(() => { runner.stop(); server.close() })
+
+    runner.setRate(10)
+    await wait(500)
+
+    assert.ok(receivedHeaders, 'expected headers to be received')
+    assert.equal(receivedHeaders['x-custom-header'], 'test-value')
+    assert.equal(receivedHeaders.authorization, 'Bearer token123')
+  })
+
+  it('should send request body', async () => {
+    let receivedBody = ''
+    const { server, url } = await startServer((req, res) => {
+      let data = ''
+      req.on('data', (chunk) => { data += chunk })
+      req.on('end', () => {
+        receivedBody = data
+        res.writeHead(200)
+        res.end('ok')
+      })
+    })
+    const runner = new TrafficRunner(url, () => {}, {
+      method: 'POST',
+      body: '{"key":"value"}'
+    })
+    after(() => { runner.stop(); server.close() })
+
+    runner.setRate(10)
+    await wait(500)
+
+    assert.equal(receivedBody, '{"key":"value"}')
+  })
+
+  it('should send headers and body together', async () => {
+    let receivedHeaders = null
+    let receivedBody = ''
+    const { server, url } = await startServer((req, res) => {
+      receivedHeaders = req.headers
+      let data = ''
+      req.on('data', (chunk) => { data += chunk })
+      req.on('end', () => {
+        receivedBody = data
+        res.writeHead(200)
+        res.end('ok')
+      })
+    })
+    const runner = new TrafficRunner(url, () => {}, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: '{"hello":"world"}'
+    })
+    after(() => { runner.stop(); server.close() })
+
+    runner.setRate(10)
+    await wait(500)
+
+    assert.equal(receivedHeaders['content-type'], 'application/json')
+    assert.equal(receivedBody, '{"hello":"world"}')
+  })
+
+  it('should work without headers and body options', async () => {
+    let receivedHeaders = null
+    const { server, url } = await startServer((req, res) => {
+      receivedHeaders = req.headers
+      res.writeHead(200)
+      res.end('ok')
+    })
+    const runner = new TrafficRunner(url, () => {})
+    after(() => { runner.stop(); server.close() })
+
+    runner.setRate(10)
+    await wait(500)
+
+    assert.ok(receivedHeaders, 'expected headers to be received')
+    assert.ok(!receivedHeaders['content-type'], 'expected no content-type header')
+  })
 })
