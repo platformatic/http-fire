@@ -1,6 +1,6 @@
 {
   "name": "@platformatic/http-fire",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "HTTP traffic generator with realistic traffic patterns",
   "main": "index.js",
   "bin": {
@@ -9,11 +9,20 @@
   "scripts": {
     "test": "node --test"
   },
+  "author": "Platformatic Inc. <oss@platformatic.dev> (https://platformatic.dev)",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/platformatic/http-fire.git"
+  },
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/platformatic/http-fire/issues"
+  },
+  "homepage": "https://github.com/platformatic/http-fire#readme",
   "dependencies": {
     "undici": "^7.0.0"
   },
   "engines": {
     "node": ">=18.0.0"
-  },
-  "license": "Apache-2.0"
+  }
 }
