@@ -1,0 +1,19 @@
+{
+  "name": "@platformatic/http-fire",
+  "version": "1.0.0",
+  "description": "HTTP traffic generator with realistic traffic patterns",
+  "main": "index.js",
+  "bin": {
+    "fire": "bin/traffic.js"
+  },
+  "scripts": {
+    "test": "node --test"
+  },
+  "dependencies": {
+    "undici": "^7.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "license": "Apache-2.0"
+}
